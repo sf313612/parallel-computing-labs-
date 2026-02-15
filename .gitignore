@@ -5,6 +5,8 @@ x64/
 *.user
 *.suo
 *.exe
+*.pdb
 
 *.doc
 *.docx
+*.xlsx

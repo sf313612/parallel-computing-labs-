@@ -114,6 +114,25 @@ void testFunction()
     if (maxThreads == 0)
         maxThreads = 8;
 
+    unsigned int physicalCores = 6;
+
+    unsigned int halfPhysical = physicalCores / 2;
+    if (halfPhysical < 1)
+        halfPhysical = 1;
+
+    vector<unsigned int> threadCounts = {
+        halfPhysical,
+        physicalCores,
+        maxThreads,
+        maxThreads * 2,
+        maxThreads * 4,
+        maxThreads * 8,
+        maxThreads * 16
+    };
+
+    cout << "Physical cores: " << physicalCores << endl;
+    cout << "Logical cores: " << maxThreads << endl;
+ 
     for (int n : sizes) {
 
         cout << "Vector size: " << n << endl;
@@ -124,7 +143,7 @@ void testFunction()
         calculateTime(vec);
 
         cout << "Parallel calculations: " << endl;
-        for (int threads : {1, 2, 4, 6, 12}) {
+        for (unsigned int threads : threadCounts) {
             cout << "Threads: " << threads;
             calculateTimeForPar(vec, threads);
         }
