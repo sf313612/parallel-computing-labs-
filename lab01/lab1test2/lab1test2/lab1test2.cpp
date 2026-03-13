@@ -70,11 +70,11 @@ void calculateTimeForPar(const vector<double>& vec, int numThreads)
 
         auto end = chrono::high_resolution_clock::now();
 
-        chrono::duration<double, milli> duration = end - start;
+        chrono::duration<double> duration = end - start;
         totalTime += duration.count();
     }
 
-    cout << " Time (ms, average of " << runs << " runs): " << totalTime / runs << endl;
+    cout << " Time (s, average of " << runs << " runs): " << totalTime / runs << endl;
 }
 
 void calculateTime(const vector<double>& vec) 
@@ -89,11 +89,11 @@ void calculateTime(const vector<double>& vec)
 
         auto end = chrono::high_resolution_clock::now();
 
-        chrono::duration<double, milli> duration = end - start;
+        chrono::duration<double> duration = end - start;
         totalTime += duration.count();
     }
 
-    cout << "Time (ms, average of " << runs << " runs): " << totalTime / runs << endl;
+    cout << "Time (s, average of " << runs << " runs): " << totalTime / runs << endl;
 }
 
 vector<double> createVector(int n) {
