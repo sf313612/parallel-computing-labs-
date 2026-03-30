@@ -10,6 +10,7 @@
 
 using namespace std;
 
+// create array
 vector<int> generateArray(int size) {
     vector<int> arr(size);
 
@@ -17,6 +18,7 @@ vector<int> generateArray(int size) {
     mt19937 gen(rd());
     uniform_int_distribution<> dist(-1000, 1000);
 
+    // fill array with random numbers
     generate(arr.begin(), arr.end(), [&]() {
         return dist(gen);
         });
@@ -27,14 +29,17 @@ vector<int> generateArray(int size) {
 // sequential algorithm
 pair<int, int> sequentialMax(const vector<int>& arr) {
     int max = arr[0];
-    int count = 1; // why 1?
+    int count = 1;
 
+    // going throught array
     for (int i = 1; i < arr.size(); i++) {
+
+        // compare next value 
         if (arr[i] > max) {
             max = arr[i];
             count = 1;
         }
-        else if (arr[i] == max) {
+        else if (arr[i] == max) { // if max value repeats
             count++;
         }
     }
@@ -44,44 +49,42 @@ pair<int, int> sequentialMax(const vector<int>& arr) {
 
 // parallel algorithm with mutex
 pair<int, int> mutexMax(const vector<int>& arr, int threadCount) {
-    int globalMax = INT_MIN; //why?
+    int globalMax = INT_MIN;
     int globalCount = 0;
 
     // create mutex
     mutex mtx;
 
+    // divade array into parts
     int n = arr.size();
     int chunk = n / threadCount;
 
+
     vector<thread> threads;
     auto worker = [&](int start, int end) {
-        int localMax = INT_MIN;
-        int localCount = 0;
 
         for (int i = start; i < end; i++) {
-            if (arr[i] > localMax) {
-                localMax = arr[i];
-                localCount = 1;
-            }
-            else if (arr[i] == localMax) {
-                localCount++;
-            }
-        }
+            // one thread can change max
+            lock_guard<mutex> lock(mtx);
 
-        lock_guard<mutex> lock(mtx);
-
-        if (localMax > globalMax) {
-            globalMax = localMax;
-            globalCount = localCount;
-        }
-        else if (localMax == globalMax) {
-            globalCount += localCount;
+            if (arr[i] > globalMax) {
+                globalMax = arr[i];
+                globalCount = 1;
+            }
+            else if (arr[i] == globalMax) {
+                globalCount++;
+            }
         }
     };
 
     for (int i = 0; i < threadCount; i++) {
+
         int start = i * chunk;
-        int end = (i == threadCount - 1) ? n : start + chunk; // rewrite
+        int end = start + chunk;
+
+        if (i == threadCount - 1) {
+            end = n;
+        }
 
         threads.emplace_back(worker, start, end);
     }
@@ -97,40 +100,33 @@ pair<int, int> atomicMax(const vector<int>& arr, int threadCount) {
     atomic <int> globalMax(INT_MIN);
     atomic <int> globalCount(0);
 
+    // divade array into parts
     int n = arr.size();
     int chunk = n / threadCount;
 
     vector<thread> threads;
     auto worker = [&](int start, int end) {
 
-        int localMax = INT_MIN;
         int localCount = 0;
-
-        // Step 1 — find local max
         for (int i = start; i < end; i++) {
+            int value = arr[i];
+            int currentMax = globalMax.load();
 
-            if (arr[i] > localMax) {
-                localMax = arr[i];
+            if (value > currentMax) {
                 localCount = 1;
+
+                while (!globalMax.compare_exchange_weak(currentMax, value)) {
+                    if (value <= currentMax)
+                        break;
+                }
+
+                if (globalMax.load() == value) {
+                    globalCount.store(localCount); 
+                }
             }
-            else if (arr[i] == localMax) {
-                localCount++;
+            else if (value == currentMax) {
+                globalCount.fetch_add(1); 
             }
-        }
-
-        // Step 2 — update global using CAS
-        int currentMax = globalMax.load();
-
-        while (localMax > currentMax) {
-
-            if (globalMax.compare_exchange_weak(currentMax, localMax)) {
-                globalCount.store(localCount);
-                return;
-            }
-        }
-
-        if (localMax == globalMax.load()) {
-            globalCount.fetch_add(localCount);
         }
     };
 
@@ -149,7 +145,7 @@ pair<int, int> atomicMax(const vector<int>& arr, int threadCount) {
     for (auto& t : threads)
         t.join();
 
-    return { globalMax.load(), globalCount.load() }; // do not understand.
+    return { globalMax.load(), globalCount.load() };
 }
 
 int main()
@@ -185,6 +181,6 @@ int main()
         
         cout << "Max sequential = " << res1.first << " Count = " << res1.second << endl;
         cout << "Max mutex = " << res2.first << " Count = " << res2.second << endl;
-        cout << "Max atomic = " << res2.first << " Count = " << res2.second << endl;
+        cout << "Max atomic = " << res2.first << " Count = " << res3.second << endl;
     }
 }
