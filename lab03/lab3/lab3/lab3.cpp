@@ -157,8 +157,10 @@ public:
             while (!tasks.empty()) tasks.pop();
         }
 
+        // notify all workers
         cv.notify_all();
 
+        // stop workers
         for (auto& t : workers) {
             if (t.joinable())
                 t.join();
@@ -253,9 +255,11 @@ int run_test(int producersCount, int tasksPerProducer, int delayMs) {
             });
     }
 
+    // wait for producers to stop
     for (auto& t : producers)
         t.join();
 
+    // wait for workers to stop 
     std::this_thread::sleep_for(std::chrono::seconds(2));
 
     std::cout << "\nSTATISTICS\n";
@@ -273,6 +277,7 @@ int run_test(int producersCount, int tasksPerProducer, int delayMs) {
         << (pool.queue_checks ? pool.queue_size_sum / pool.queue_checks : 0)
         << "\n";
 
+    // stop pool
     pool.stop(false);
 
     return 0;
